@@ -1,5 +1,103 @@
 # AlphaCert Technical Screening
-# Candidate
+# Candidate - Fahad
+
+I have modified CanWeFixIt solution and checked in my changes in fork.
+Fork link is : https://github.com/fashaikh2021/Interview
+
+YesWeCan solution presenting the output as expected
+
+=== MarketData Verification ===
+Active Test: Passed
+Content Test: Passed
+Count Test: Passed
+========================================
+=== Instrument Verification ===
+Active Test: Passed
+Content Test: Passed
+Count Test: Passed
+========================================
+=== MarketValuation Verification ===
+Active Test: Passed
+Content Test: Passed
+Count Test: Passed
+========================================
+Press any key to exit...
+Further notes are following,
+-------------------------------------------------------------------------------------------------
+1-Implemented info logs, we can extend logs for errors etc.
+2-Added Valuation logic
+3-Added ORM-EF - also installed Microsoft.EntityFrameworkCore.Sqlite
+4-MarketData logic added
+5-Removed direct SQL queries
+
+Also Used Postman to test the end points.
+------------------------------------------------------------------------------
+http://localhost:5010/v1/Instruments
+------------------------------------------------------------------------------
+results
+
+[
+    {
+        "id": 2,
+        "sedol": "Sedol2",
+        "name": "Name2",
+        "active": true
+    },
+    {
+        "id": 4,
+        "sedol": "Sedol4",
+        "name": "Name4",
+        "active": true
+    },
+    {
+        "id": 6,
+        "sedol": "",
+        "name": "Name6",
+        "active": true
+    },
+    {
+        "id": 8,
+        "sedol": "Sedol8",
+        "name": "Name8",
+        "active": true
+    }
+]
+------------------------------------------------------------------------------
+http://localhost:5010/v1/MarketData
+------------------------------------------------------------------------------
+Result
+[
+    {
+        "id": 2,
+        "dataValue": 2222,
+        "sedol": "Sedol2",
+        "instrumentId": 2,
+        "active": true
+    },
+    {
+        "id": 4,
+        "dataValue": 4444,
+        "sedol": "Sedol4",
+        "instrumentId": 4,
+        "active": true
+    }
+]
+
+------------------------------------------------------------------------------
+http://localhost:5010/v1/Valuations
+------------------------------------------------------------------------------
+Result
+
+[
+    {
+        "name": "DataValueTotal",
+        "total": 13332
+    }
+]
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## Overview
 
