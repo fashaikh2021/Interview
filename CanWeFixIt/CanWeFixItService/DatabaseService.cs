@@ -10,68 +10,99 @@ using Microsoft.Extensions.Logging;
 
 namespace CanWeFixItService
 {
-    public class DatabaseService : IDatabaseService
-    {
-        // See SQLite In-Memory example:
-        // https://github.com/dotnet/docs/blob/main/samples/snippets/standard/data/sqlite/InMemorySample/Program.cs
-        
-        // Using a name and a shared cache allows multiple connections to access the same
-        // in-memory database
-        const string connectionString = "Data Source=DatabaseService;Mode=Memory;Cache=Shared";
-        private SqliteConnection _connection;
+	public class DatabaseService : IDatabaseService
+	{
+		// See SQLite In-Memory example:
+		// https://github.com/dotnet/docs/blob/main/samples/snippets/standard/data/sqlite/InMemorySample/Program.cs
+
+		// Using a name and a shared cache allows multiple connections to access the same
+		// in-memory database
+		const string connectionString = "Data Source=DatabaseService;Mode=Memory;Cache=Shared";
+		private SqliteConnection _connection;
 		DatabaseContext context = new DatabaseContext();
 
 		private readonly ILogger<DatabaseService> _logger;
 		public DatabaseService(ILogger<DatabaseService> logger)
-        {
-			_logger = logger;
-			_logger.Log(LogLevel.Information, "logger is setup in DatabaseService()");
-			_logger.Log(LogLevel.Information, "Called DatabaseService()");
-			// The in-memory database only persists while a connection is open to it. To manage
-			// its lifetime, keep one open connection around for as long as you need it.
-			_connection = new SqliteConnection(connectionString);
-            _connection.Open();
-			_logger.Log(LogLevel.Information, "SqliteConnection is now open");
-			context = new DatabaseContext();
-			_logger.Log(LogLevel.Information, "context is setup");
+		{
+			try
+			{
+				_logger = logger;
+				_logger.Log(LogLevel.Information, "logger is setup in DatabaseService()");
+				_logger.Log(LogLevel.Information, "Called DatabaseService()");
+				// The in-memory database only persists while a connection is open to it. To manage
+				// its lifetime, keep one open connection around for as long as you need it.
+				_connection = new SqliteConnection(connectionString);
+				_connection.Open();
+				_logger.Log(LogLevel.Information, "SqliteConnection is now open");
+				context = new DatabaseContext();
+				_logger.Log(LogLevel.Information, "context is setup");
+			}
+			catch (Exception e)
+			{
+				_logger.Log(LogLevel.Error, $"DatabaseService:{e.Message}");
+			}
 		}
 
-        public async Task<IEnumerable<Instrument>> Instruments()
+		public async Task<IEnumerable<Instrument>> Instruments()
 		{
-			_logger.Log(LogLevel.Information, "Called Instruments()");
-			return context.Instrument.Where(o=>o.Active == true);
-        }
+			try
+			{
+				_logger.Log(LogLevel.Information, "Called Instruments()");
+				return context.Instrument.Where(o => o.Active == true);
+			}
+			catch (Exception e)
+			{
+				_logger.Log(LogLevel.Error, $"Instruments():{e.Message}");
+				return null;
+			}
+		}
 
-        public async Task<IEnumerable<MarketData>> MarketData()
-        {
-			_logger.Log(LogLevel.Information, "Called MarketData()");
-			var data = context.MarketData.Join(context.Instrument,
-                md => md.Sedol,
-                i => i.Sedol,
-                (md, i) => new MarketData
-                {
-                    Id = md.Id,
-                    DataValue = md.DataValue,
-                    Sedol = md.Sedol,
-                    InstrumentId = i.Id,
-                    Active = md.Active
-                }).Where(o=>o.Active == true).ToList();
+		public async Task<IEnumerable<MarketData>> MarketData()
+		{
+			try
+			{
+				_logger.Log(LogLevel.Information, "Called MarketData()");
+				var data = context.MarketData.Join(context.Instrument,
+					md => md.Sedol,
+					i => i.Sedol,
+					(md, i) => new MarketData
+					{
+						Id = md.Id,
+						DataValue = md.DataValue,
+						Sedol = md.Sedol,
+						InstrumentId = i.Id,
+						Active = md.Active
+					}).Where(o => o.Active == true).ToList();
 
-            var md = context.MarketData.Where(o => o.Active == true);
-			_logger.Log(LogLevel.Information, "Market Data accessed via context");
-			_logger.Log(LogLevel.Information, "Market Data joined with instrument on sedol via context");
-			_logger.Log(LogLevel.Information, "return Data prepared");
-			return  data;
-        }
+				var md = context.MarketData.Where(o => o.Active == true);
+				_logger.Log(LogLevel.Information, "Market Data accessed via context");
+				_logger.Log(LogLevel.Information, "Market Data joined with instrument on sedol via context");
+				_logger.Log(LogLevel.Information, "return Data prepared");
+				return data;
+			}
+			catch (Exception e)
+			{
+				_logger.Log(LogLevel.Error, $"MarketData():{e.Message}");
+				return null;
+			}
+		}
 
 		public async Task<IEnumerable<MarketValuation>> MarketValuation()
 		{
-			_logger.Log(LogLevel.Information, " Called MarketValuation()");
-			var data = context.MarketData.Where(o => o.Active == true);
-			_logger.Log(LogLevel.Information, "Market Data accessed via context for valuation");
-			MarketValuation mv = new MarketValuation() { Name = "DataValueTotal", Total = data.Sum(o => o.DataValue) };
-			_logger.Log(LogLevel.Information, "return MarketValuation object created");
-			return new[] { mv };
+			try
+			{
+				_logger.Log(LogLevel.Information, " Called MarketValuation()");
+				var data = context.MarketData.Where(o => o.Active == true);
+				_logger.Log(LogLevel.Information, "Market Data accessed via context for valuation");
+				MarketValuation mv = new MarketValuation() { Name = "DataValueTotal", Total = data.Sum(o => o.DataValue) };
+				_logger.Log(LogLevel.Information, "return MarketValuation object created");
+				return new[] { mv };
+			}
+			catch (Exception e)
+			{
+				_logger.Log(LogLevel.Error, $"MarketValuation():{e.Message}");
+				return null;
+			}
 		}
 
 		/// <summary>
@@ -79,11 +110,13 @@ namespace CanWeFixItService
 		/// It is called during app startup 
 		/// </summary>
 		public void SetupDatabase()
-        {
-            _logger.Log(LogLevel.Information, "Called SetupDatabase()");
-			_logger.Log(LogLevel.Information, "Tables going to be created");
+		{
+			try
+			{
+				_logger.Log(LogLevel.Information, "Called SetupDatabase()");
+				_logger.Log(LogLevel.Information, "Tables going to be created");
 
-			const string createInstruments = @"
+				const string createInstruments = @"
                 CREATE TABLE instrument
                 (
                     id     int,
@@ -102,10 +135,10 @@ namespace CanWeFixItService
                        (8, 'Sedol8', 'Name8', 1),
                        (9, 'Sedol9', 'Name9', 0)";
 
-            _connection.Execute(createInstruments);
-			_logger.Log(LogLevel.Information, "Instrument created");
+				_connection.Execute(createInstruments);
+				_logger.Log(LogLevel.Information, "Instrument created");
 
-			const string createMarketData = @"
+				const string createMarketData = @"
                 CREATE TABLE marketdata
                 (
                     id        int,
@@ -120,8 +153,13 @@ namespace CanWeFixItService
                        (4, 4444, 'Sedol4', 1),
                        (5, 5555, 'Sedol5', 0),
                        (6, 6666, 'Sedol6', 1)";
-			_connection.Execute(createMarketData);
-			_logger.Log(LogLevel.Information, "Market Data created");
+				_connection.Execute(createMarketData);
+				_logger.Log(LogLevel.Information, "Market Data created");
+			}
+			catch (Exception e)
+			{
+				_logger.Log(LogLevel.Error, $"SetupDatabase():{e.Message}");
+			}
 		}
-    }
+	}
 }
