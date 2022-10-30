@@ -1,7 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanWeFixItService
 {
@@ -14,32 +19,71 @@ namespace CanWeFixItService
         // in-memory database
         const string connectionString = "Data Source=DatabaseService;Mode=Memory;Cache=Shared";
         private SqliteConnection _connection;
+		DatabaseContext context = new DatabaseContext();
 
-        public DatabaseService()
+		private readonly ILogger<DatabaseService> _logger;
+		public DatabaseService(ILogger<DatabaseService> logger)
         {
-            // The in-memory database only persists while a connection is open to it. To manage
-            // its lifetime, keep one open connection around for as long as you need it.
-            _connection = new SqliteConnection(connectionString);
+			_logger = logger;
+			_logger.Log(LogLevel.Information, "logger is setup in DatabaseService()");
+			_logger.Log(LogLevel.Information, "Called DatabaseService()");
+			// The in-memory database only persists while a connection is open to it. To manage
+			// its lifetime, keep one open connection around for as long as you need it.
+			_connection = new SqliteConnection(connectionString);
             _connection.Open();
-        }
-        
-        public IEnumerable<Instrument> Instruments()
-        {
-            return _connection.QueryAsync<Instrument>("SQL GOES HERE");
+			_logger.Log(LogLevel.Information, "SqliteConnection is now open");
+			context = new DatabaseContext();
+			_logger.Log(LogLevel.Information, "context is setup");
+		}
+
+        public async Task<IEnumerable<Instrument>> Instruments()
+		{
+			_logger.Log(LogLevel.Information, "Called Instruments()");
+			return context.Instrument.Where(o=>o.Active == true);
         }
 
         public async Task<IEnumerable<MarketData>> MarketData()
         {
-            return await _connection.QueryAsync<MarketData>("SELECT Id, DataValue FROM MarketData WHERE Active = 0");
+			_logger.Log(LogLevel.Information, "Called MarketData()");
+			var data = context.MarketData.Join(context.Instrument,
+                md => md.Sedol,
+                i => i.Sedol,
+                (md, i) => new MarketData
+                {
+                    Id = md.Id,
+                    DataValue = md.DataValue,
+                    Sedol = md.Sedol,
+                    InstrumentId = i.Id,
+                    Active = md.Active
+                }).Where(o=>o.Active == true).ToList();
+
+            var md = context.MarketData.Where(o => o.Active == true);
+			_logger.Log(LogLevel.Information, "Market Data accessed via context");
+			_logger.Log(LogLevel.Information, "Market Data joined with instrument on sedol via context");
+			_logger.Log(LogLevel.Information, "return Data prepared");
+			return  data;
         }
 
-        /// <summary>
-        /// This is complete and will correctly load the test data.
-        /// It is called during app startup 
-        /// </summary>
-        public void SetupDatabase()
+		public async Task<IEnumerable<MarketValuation>> MarketValuation()
+		{
+			_logger.Log(LogLevel.Information, " Called MarketValuation()");
+			var data = context.MarketData.Where(o => o.Active == true);
+			_logger.Log(LogLevel.Information, "Market Data accessed via context for valuation");
+			MarketValuation mv = new MarketValuation() { Name = "DataValueTotal", Total = data.Sum(o => o.DataValue) };
+			_logger.Log(LogLevel.Information, "return MarketValuation object created");
+			return new[] { mv };
+		}
+
+		/// <summary>
+		/// This is complete and will correctly load the test data.
+		/// It is called during app startup 
+		/// </summary>
+		public void SetupDatabase()
         {
-            const string createInstruments = @"
+            _logger.Log(LogLevel.Information, "Called SetupDatabase()");
+			_logger.Log(LogLevel.Information, "Tables going to be created");
+
+			const string createInstruments = @"
                 CREATE TABLE instrument
                 (
                     id     int,
@@ -59,8 +103,9 @@ namespace CanWeFixItService
                        (9, 'Sedol9', 'Name9', 0)";
 
             _connection.Execute(createInstruments);
-            
-            const string createMarketData = @"
+			_logger.Log(LogLevel.Information, "Instrument created");
+
+			const string createMarketData = @"
                 CREATE TABLE marketdata
                 (
                     id        int,
@@ -75,8 +120,8 @@ namespace CanWeFixItService
                        (4, 4444, 'Sedol4', 1),
                        (5, 5555, 'Sedol5', 0),
                        (6, 6666, 'Sedol6', 1)";
-
-            _connection.Execute(createMarketData);
-        }
+			_connection.Execute(createMarketData);
+			_logger.Log(LogLevel.Information, "Market Data created");
+		}
     }
 }
