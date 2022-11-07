@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
@@ -12,11 +11,6 @@ namespace CanWeFixItService
 {
 	public class DatabaseService : IDatabaseService
 	{
-		// See SQLite In-Memory example:
-		// https://github.com/dotnet/docs/blob/main/samples/snippets/standard/data/sqlite/InMemorySample/Program.cs
-
-		// Using a name and a shared cache allows multiple connections to access the same
-		// in-memory database
 		const string connectionString = "Data Source=DatabaseService;Mode=Memory;Cache=Shared";
 		private SqliteConnection _connection;
 		DatabaseContext context = new DatabaseContext();
@@ -27,10 +21,8 @@ namespace CanWeFixItService
 			try
 			{
 				_logger = logger;
-				_logger.Log(LogLevel.Information, "logger is setup in DatabaseService()");
+				_logger.Log(LogLevel.Information, "logger is setup in DatabaseService class.");
 				_logger.Log(LogLevel.Information, "Called DatabaseService()");
-				// The in-memory database only persists while a connection is open to it. To manage
-				// its lifetime, keep one open connection around for as long as you need it.
 				_connection = new SqliteConnection(connectionString);
 				_connection.Open();
 				_logger.Log(LogLevel.Information, "SqliteConnection is now open");
@@ -47,11 +39,12 @@ namespace CanWeFixItService
 		{
 			try
 			{
-				_logger.Log(LogLevel.Information, "Called Instruments()");
-				return context.Instrument.Where(o => o.Active == true);
+				_logger.Log(LogLevel.Information,connectionString, "All active instruments are called." );
+				return await context.Instrument.Where(o => o.Active == true).ToListAsync();
 			}
 			catch (Exception e)
 			{
+				_logger.Log(LogLevel.Information, "Exception occured during calling all active instruments.");
 				_logger.Log(LogLevel.Error, $"Instruments():{e.Message}");
 				return null;
 			}
@@ -62,7 +55,7 @@ namespace CanWeFixItService
 			try
 			{
 				_logger.Log(LogLevel.Information, "Called MarketData()");
-				var data = context.MarketData.Join(context.Instrument,
+				var data = await context.MarketData.Join(context.Instrument,
 					md => md.Sedol,
 					i => i.Sedol,
 					(md, i) => new MarketData
@@ -72,9 +65,8 @@ namespace CanWeFixItService
 						Sedol = md.Sedol,
 						InstrumentId = i.Id,
 						Active = md.Active
-					}).Where(o => o.Active == true).ToList();
+					}).Where(o => o.Active == true).ToListAsync();
 
-				var md = context.MarketData.Where(o => o.Active == true);
 				_logger.Log(LogLevel.Information, "Market Data accessed via context");
 				_logger.Log(LogLevel.Information, "Market Data joined with instrument on sedol via context");
 				_logger.Log(LogLevel.Information, "return Data prepared");
@@ -92,7 +84,7 @@ namespace CanWeFixItService
 			try
 			{
 				_logger.Log(LogLevel.Information, " Called MarketValuation()");
-				var data = context.MarketData.Where(o => o.Active == true);
+				var data = await context.MarketData.Where(o => o.Active == true).ToListAsync();
 				_logger.Log(LogLevel.Information, "Market Data accessed via context for valuation");
 				MarketValuation mv = new MarketValuation() { Name = "DataValueTotal", Total = data.Sum(o => o.DataValue) };
 				_logger.Log(LogLevel.Information, "return MarketValuation object created");

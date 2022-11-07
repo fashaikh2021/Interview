@@ -17,8 +17,6 @@ namespace CanWeFixItService
 {
 	public class DatabaseContext : DbContext
 	{
-		private readonly ILogger<DatabaseService> _logger;
-
 		protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 		{
 			optionsBuilder.UseSqlite(@"Data Source=DatabaseService;Mode=Memory;Cache=Shared", options =>
